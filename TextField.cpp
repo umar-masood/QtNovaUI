@@ -322,7 +322,8 @@ void TextField::contextMenuEvent(QContextMenuEvent *event) {
         else qDebug() << "Unknown context menu action:" << action;
     });
 
-    menu->show();
+    if (menu->hasActions())
+        menu->show();
     menu->move(event->globalPos());
 }
 
