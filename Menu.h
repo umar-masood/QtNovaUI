@@ -64,6 +64,7 @@ class Menu : public QListView {
     * @warning Using both Submenu and Shortcut at same time is not allowed.
     */
    void addAction(const MenuAction &menuAction);
+   bool hasActions() const;
 
    /**
     * @brief Specify the index of the item which you want to remove.
