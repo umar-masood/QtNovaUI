@@ -115,6 +115,10 @@ void Menu::addAction(const MenuAction &menuAction) {
     _model.appendRow(item);
 }
 
+bool Menu::hasActions() const {
+    return _model.rowCount() != 0;
+}
+
 void Menu::removeAction(int index) {
     if (index != -1) {
         _model.removeRow(index);
