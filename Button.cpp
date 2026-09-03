@@ -1,531 +1,359 @@
 #include "Button.h"
 
-Button::Button(const QString &text, QWidget *parent) : QPushButton(text, parent) { init(); }
-Button::Button(QWidget *parent) : QPushButton(parent) { init(); }
+#include <QFile>
+#include <QEvent>
+#include <QPainter>
 
-void Button::init() {
-  setFocusPolicy(Qt::NoFocus);
-
-  // Shadow Effect
-  effect = new SmoothShadow(this);
-  effect->setOffset(0, 0);
-  effect->setColor(QColor(0, 0, 0, 0));
-  effect->setBlurRadius(0);
-
-  // Smooth Shadow Effect animate
-  animate = new QPropertyAnimation(effect, "blurRadius", this);
-  animate->setDuration(300);
-  animate->setEasingCurve(QEasingCurve::InOutQuad);
-
-  // Loader Spinner
-  spinner = new SpinnerProgress(this);
-  spinner->setIndeterminate(true);
-  spinner->setFixedSize(QSize(20, 20), true);
-
-  // Loading Default Colors
-  loadDefaultColors();
+Button::Button(QWidget *parent) : QPushButton(parent), 
+                                  d(std::make_unique<ButtonPrivate>()) {
+    setFont(font());
 }
 
-void Button::setShadow(bool enable) {
-  isShadowEnabled = enable;
-  (isShadowEnabled) ? setGraphicsEffect(effect) : setGraphicsEffect(nullptr);
+Button::Button(const QString &text, QWidget *parent) : QPushButton(text, parent), 
+                                                       d(std::make_unique<ButtonPrivate>()) {
+    setFont(font());
 }
 
-void Button::setFontProperties(const QString &family, int pointSize, QFont::Weight weight, bool italic) {
-  fontFamily = family; 
-  fontSize = pointSize; 
-  fontWeight = weight; 
-  isItalic = italic;
+void Button::setThemeIcon(const QString &light, const QString &dark) {
+    if (d->style == Button::Style::TextOnly) {
+        qWarning() << "Button style is not set to Iconic.";
+        return;
+    }
+
+    if (light.isEmpty() || dark.isEmpty()) {
+        qWarning() << "One of theme icon paths is empty.";
+        return;
+    }
+
+    if (!QFile::exists(light)) {
+        qWarning() << "Light theme icon path does not exist.";
+        return;
+    }
+
+    if (!QFile::exists(dark)) {
+        qWarning() << "Dark theme icon path does not exist.";
+        return;
+    }
+
+    d->darkIcon = QPixmap(dark).scaled(iconSize(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+    d->lightIcon = QPixmap(light).scaled(iconSize(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);;
+
+    update();
 }
 
-void Button::setGradientColors(const QString &startColor, const QString &endColor, const QString &hoverColor) {
-  isGradient = true;
+void Button::setFont(const QFont &font) {
+    QPushButton::setFont(font);
+    d->fm = QFontMetrics(font);
 
-  hoverGradientColor = QColor(hoverColor);
-  gradientStart = QColor(startColor);
-  gradientEnd = QColor(endColor);
-
-  color1 = gradientStart;
-  color2 = gradientEnd;
-
-  update();
+    update();
 }
 
-void Button::setDisplayMode(DisplayMode mode) {
-  displayMode = mode;
-  
-  if (displayMode == IconOnly) 
-    setSecondary(true);
-  
-  update();
-}
-
-void Button::setIconPaths(const QString &lightIcon, const QString &darkIcon) {
-  isUnicodeIcon = false;
-
-  // Preload pixmaps
-  if (!lightIcon.isEmpty()) 
-    _lightIcon = IconManager::renderSvg(lightIcon, _iconSize);
-  
-  if (!darkIcon.isEmpty()) 
-    _darkIcon = IconManager::renderSvg(darkIcon, _iconSize);
-}
-
-void Button::setUnicodeIcon(const QString &unicode, int pointSize) {
-  _unicodeIcon = unicode;
-  unicodeIconSize = pointSize;
-  isUnicodeIcon = true;
-
-  update();
-}
-
-void Button::setIconSize(const QSize &s) {
-  _iconSize = s;
-  isUnicodeIcon = false;
-}
-
-void Button::setFixedSize(const QSize &s) { 
-  if (s.isValid()) 
-    _customSize = s; 
-  
-  QPushButton::setFixedSize(s);
-}
-
-void Button::setDarkMode(bool enable) { 
-  isDarkMode = enable; 
-
-  if (isLoaderBtn && spinner) 
-    spinner->setDarkMode(enable); 
-}
-
-void Button::setCheckedButtonIcon(const QString &iconPath) { 
-  if (!iconPath.isEmpty()) 
-    _checkedButtonIcon = IconManager::renderSvg(iconPath, _iconSize);
-}
-
-void Button::setPrimaryButtonIcon(const QString &iconPath) { 
-  if (!iconPath.isEmpty()) 
-    _primaryButtonIcon = IconManager::renderSvg(iconPath, _iconSize);
-}
-
-void Button::setRightSideIcon(const QString &iconLight, const QString &iconDark) {
-  if (displayMode == Button::IconOnly || displayMode == Button::IconText) {
-    hasRightSideIcon = true;
-
-    if (!iconLight.isEmpty()) 
-      _rightSideLightIcon = IconManager::renderSvg(iconLight, _iconSize);
+void Button::setCornerRadius(int radius) {
+    if (d->cornerRadius == radius)
+        return;
     
-    if (!iconDark.isEmpty()) 
-      _rightSideDarkIcon =  IconManager::renderSvg(iconDark, _iconSize);
+    d->cornerRadius = radius;
 
-  } else {
-    qWarning() << "Error: setRightSideIcon() -> Button display mode is not correct.";
-    return;
-  }
+    update();
 }
 
-void Button::setStartColor(const QColor &c) { color1 = c.name(); update(); }
-void Button::setEndColor(const QColor &c) { color2 = c.name(); update(); }
-void Button::setSecondary(bool enable) { isSecondary = enable; }
-void Button::setHyperLink(bool enable) { 
-  isHyperLink = true;
-  
-  if (isSecondary) 
-    isSecondary = false; 
+int Button::cornerRadius() const {
+    return d->cornerRadius;
 }
 
-void Button::setColor(const ButtonStateColor &state, const QColor &color) {
-  _colors[state] = color;
-  update();
+void Button::setDarkMode(bool dark) {
+    if (d->darkMode == dark)
+        return;
+
+    d->darkMode = dark;
+
+    update();
 }
 
-void Button::setTextColor(const ButtonTextColor &type, const QColor &color) {
-  _textColors[type] = color;
-  update();
+bool Button::darkMode() const {
+    return d->darkMode;
 }
 
-void Button::setLoaderButton(bool enable) { isLoaderBtn = enable; }
-void Button::setBorderTransparent(bool enable) { isBorderTransparent = enable; }
-void Button::setNormalBackgroundTransparent(bool enable) { isNormalBackgroundTransparent = enable; }
-void Button::setFontXY(int x, int y) { 
-  _x = x;
-  _y = y;
-  update(); 
+void Button::setStyle(Button::Style style) {
+    if (d->style == style)
+        return;
+
+    d->style = style;
+
+    update();
 }
 
-void Button::setText(const QString &text) {
-  if (isLoaderBtn && spinner) {
-    if (text.isEmpty()) {
-      spinner->start();
-      spinner->move((width() - spinner->width()) / 2, (height() - spinner->height()) / 2);
-    } else 
-      spinner->stop();
-  }
-
-  QPushButton::setText(text);
+Button::Style Button::style() const {
+    return d->style;
 }
 
-void Button::loadDefaultColors() {
-  _colors.clear();
-
-  // Primary
-  _colors[PrimaryNormal]      = QColor("#008EDE");
-  _colors[PrimaryHover]       = QColor("#1BB3E6");
-  _colors[PrimaryPressed]     = QColor("#109AC7");
-  _colors[DisabledPrimary]    = QColor("#B0E0FF");
-
-  // Secondary Light
-  _colors[SecondaryNormalLight]   = QColor("#FBFBFB");
-  _colors[SecondaryHoverLight]    = QColor("#F0F0F0");
-  _colors[SecondaryPressedLight]  = QColor("#FFFFFF");
-  _colors[DisabledSecondaryLight] = QColor("#E0E0E0");
-
-  // Secondary Dark
-  _colors[SecondaryNormalDark]   = QColor("#2D2D2D");
-  _colors[SecondaryHoverDark]    = QColor("#323232");
-  _colors[SecondaryPressedDark]  = QColor("#242424");
-  _colors[DisabledSecondaryDark] = QColor("#555555");
-
-  // Hyperlink
-  _colors[HyperLinkNormal]       = QColor("#008EDE");
-  _colors[HyperLinkHover]        = QColor("#15F2FF");
-
-  // Text Colors
-  // Normal
-  _textColors[PrimaryText]           = QColor("#FFFFFF");
-  _textColors[SecondaryTextLight]    = QColor("#000000");
-  _textColors[SecondaryTextDark]     = QColor("#F0F0F0");
-
-  // Disabled
-  _textColors[DisabledPrimaryText]   = QColor("#FFFFFF");          
-  _textColors[DisabledSecondaryTextLight] = QColor("#9E9E9E");   
-  _textColors[DisabledSecondaryTextDark] = QColor("#777777");    
-}
-
-// ------------------------------- Getters ---------------------------------------------------------------------
-bool Button::isDisabledState() const { return !isEnabled(); }
-bool Button::isHoverState() const { return isHover && !isPressed; }
-bool Button::isNormalState() const { return !isHover && !isPressed; }
-bool Button::isPressedState() const { return isPressed; }
-bool Button::isIconOnly() const { return displayMode == IconOnly; }
-
-QColor Button::brushColor(const ButtonStateColor &state) const { return _colors.value(state, Qt::transparent); }
-QColor Button::penColor(const ButtonTextColor &type) const { return _textColors.value(type, Qt::transparent); }
-
-// For Gradient
-QColor Button::getStartColor() const { return QColor(color1); }
-QColor Button::getEndColor() const { return QColor(color2); }
-
-// ---------------------------------- Button Background, Border Colors, Icon (Getters) ---------------------------
-QColor Button::brush() const {
-  if (isDisabledState()) 
-    return isSecondary ? brushColor(isDarkMode ? DisabledSecondaryDark : DisabledSecondaryLight)
-                       : brushColor(DisabledPrimary);
-
-  if (isCheckable() && isChecked())
-    return brushColor(PrimaryPressed);
-
-  if (isNormalState())
-    if (isNormalBackgroundTransparent)
-      return Qt::transparent;
-    else
-      return isSecondary ? brushColor(isDarkMode ? SecondaryNormalDark : SecondaryNormalLight)
-                         : brushColor(PrimaryNormal);
-
-  if (isHoverState())
-    return (isSecondary || isIconOnly()) ? brushColor(isDarkMode ? SecondaryHoverDark : SecondaryHoverLight)
-                                         : brushColor(PrimaryHover);
-
-  if (isPressedState() && !isCheckable())
-    return (isSecondary || isIconOnly()) ? brushColor(isDarkMode ? SecondaryPressedDark : SecondaryPressedLight)
-                                         : brushColor(PrimaryPressed);
-
-  return brushColor(PrimaryNormal);
-}
-
-QColor Button::pen() const {
-  // Hyperlink button
-  if (isHyperLink)
-    return isDisabledState() ? QColor("#555555") : (isHoverState() ? brushColor(HyperLinkHover) : brushColor(HyperLinkNormal));
-
-  // Disabled button
-  if (isDisabledState())
-    if (isSecondary)
-      return isDarkMode ? penColor(DisabledSecondaryTextDark) : penColor(DisabledSecondaryTextLight);
-    else
-      return penColor(DisabledPrimaryText);
-
-  // Secondary button
-  if (isSecondary)
-    return isDarkMode ? penColor(SecondaryTextDark) : penColor(SecondaryTextLight);
-
-  // Primary button
-  return penColor(PrimaryText);
-}
-
-QPixmap Button::pixmap() const {
-  if (isUnicodeIcon)
-    return QPixmap();  
-
-  if (isCheckable() && isChecked())
-    return _checkedButtonIcon;
-  else if (!isSecondary)
-    return _primaryButtonIcon;
-  else
-    return isDarkMode ? _darkIcon : _lightIcon;
-}
-
-QFont Button::font() const {
-  QFont fnt;
-  
-  if (isUnicodeIcon) {
-    fnt.setFamily("Segoe Fluent Icons");
-    fnt.setPixelSize(unicodeIconSize);
-    return fnt;
-  }
-
-  fnt.setFamily(fontFamily);
-  fnt.setPointSize(fontSize);
-  fnt.setWeight(fontWeight);
-  fnt.setItalic(isItalic);
-
-  return fnt;
-}
-
-// ----------------------------------- Button Designing --------------------------
-void Button::drawBorder(QPainter &painter) {
-  if (isGradient || isHyperLink || isBorderTransparent)
-    painter.setPen(Qt::NoPen);
-  else {
-    QPen pen(isDarkMode ? "#4D4D4D" : "#CCCCCC");
-    pen.setWidthF(0.2);
-    pen.setStyle(Qt::SolidLine);
-    pen.setJoinStyle(Qt::RoundJoin);
-    painter.setPen(pen);
-  }
-}
-
-void Button::drawBackground(QPainter &painter, const QColor &bgColor) {
-  if (isGradient) {
-    QLinearGradient gradient(rect().topLeft(), rect().topRight());
-    gradient.setColorAt(0, color1);
+void Button::setVariant(Button::Variant variant) {
+    if (d->variant == variant)
+        return;
     
-    if (!isDisabledState())
-      gradient.setColorAt(1, color2);
-    
-    painter.setBrush(gradient);
+    d->variant = variant;
 
-  } else if (isHyperLink) 
-    painter.setBrush(Qt::NoBrush);
-  else 
-    painter.setBrush(bgColor);
-
-  if (!isHyperLink) {
-    QPainterPath path;
-    path.addRoundedRect(rect().adjusted(1,1,-1,-1), 6, 6);
-    painter.drawPath(path);
-  }
+    update();
 }
 
-void Button::drawContent(QPainter &painter, const QPixmap &pixmap) {
-  QFontMetrics fm(painter.font());
-  QSize tSize = fm.size(Qt::TextSingleLine, this->text());
-  int textW = tSize.width();
-  int textH = tSize.height();
-  
-  switch (displayMode) {
-    case IconText: {
-      const int spacing = 10;    
-      const int iconX = spacing;
+Button::Variant Button::variant() const {
+    return d->variant;
+}
 
-      int iconH = isUnicodeIcon ? unicodeIconSize : pixmap.height();
-      int iconW = isUnicodeIcon ? unicodeIconSize : pixmap.width();
-      int iconY = (height() - iconH) / 2;
+void Button::setLoading(bool loading) {
+    if (d->loading == loading)
+        return;
+    
+    d->loading = loading;
 
-      int textX = _x != 0 ? _x : iconX + iconW + spacing;
-      int textY = _y != 0 ? _y : 0;
-      
-      int buttonWidth = iconX + (hasRightSideIcon ? (2 * iconW + 2 * spacing) : (iconW + spacing)) + textW + spacing; // Remove unnecessary spacing
+    update();
+}
 
-      if (!_customSize.isValid()) 
-        QPushButton::setFixedSize(buttonWidth, 36);
+bool Button::loading() const {
+    return d->loading;
+}
 
-      QRect textRect(textX, textY, textW , height());
-      painter.drawText(textRect, Qt::AlignVCenter, text());
+bool Button::pressed() const {
+    return d->pressed;
+}
 
-      if (isUnicodeIcon)
-        painter.drawText(QRect(iconX, 0, unicodeIconSize + 4, height()), Qt::AlignCenter, _unicodeIcon);
-      else
-        painter.drawPixmap(iconX, iconY, pixmap);
+bool Button::hovered() const {
+    return d->hovered;
+}
 
-      if (hasRightSideIcon) 
-        painter.drawPixmap((width() - 10 - iconW), iconY, (isDarkMode ? _rightSideDarkIcon : _rightSideLightIcon)); 
+bool Button::event(QEvent *event) {
+    switch (event->type()) {
+        case QEvent::MouseButtonPress:
+            d->pressed = true;
+            update();
+            break;
+        
+        case QEvent::MouseButtonRelease:
+            d->pressed = false;
+            update();
+            break;
 
-      break;
+        case QEvent::Enter:
+            d->hovered = true;
+            update();
+            break;
+
+        case QEvent::Leave:
+            d->hovered = false;
+            update();
+            break;
+
+        case QEvent::Hide:
+            d->pressed = false;
+            d->hovered = false;
+            update();
+            break;
     }
 
-    case IconOnly: {
-      if (isUnicodeIcon)
-        painter.drawText(rect(), Qt::AlignCenter, _unicodeIcon);
-      else {
-        int x = (width() - pixmap.width()) / 2;
-        int y = (height() - pixmap.height()) / 2;
-        painter.drawPixmap(x, y, pixmap);
-      }
-
-      break;
-    }
-
-    case TextOnly: {
-      int padding = 12;
-      int buttonWidth = padding + textW + padding;
-
-      if (_customSize.isValid()) {
-        textW = width() - 2 * padding;
-        setFixedSize(_customSize);
-      } else
-        QPushButton::setFixedSize(buttonWidth, 36);
-
-      int textX = _x != 0 ? _x : (isHyperLink ? 0 : padding);
-      int textY = _y != 0 ? _y : 0;
-
-      QRect textRect = isHyperLink ? QRect(textX, textY, width(), height()) : QRect(textX, textY, textW, height());
-
-      painter.drawText( textRect, isHyperLink ? (Qt::AlignLeft | Qt::AlignVCenter) : (Qt::AlignCenter | Qt::TextWordWrap), text());
-
-      break;
-    }
-
-    case TextUnderIcon: {
-      const int hspacing = 12;
-      const int vSpacing = 6;
-      const int gap = 4;
-
-      int textY = vSpacing + (isUnicodeIcon ? unicodeIconSize : pixmap.height()) + gap;
-
-      int buttonWidth = hspacing + textW + hspacing;
-      int buttonHeight = vSpacing + pixmap.height() + gap + textH + vSpacing;
-
-      if (_customSize.isValid()) 
-        setFixedSize(_customSize);
-      else 
-        QPushButton::setFixedSize(buttonWidth, buttonHeight);
-
-      if (isUnicodeIcon)
-        painter.drawText(QRect(0, vSpacing, width(), unicodeIconSize + 4), Qt::AlignCenter, _unicodeIcon);
-      else {
-        int x = (width() - pixmap.width()) / 2;
-        painter.drawPixmap(x, vSpacing, pixmap);
-      }
-
-      QRect textRect(0, textY, width(), textH);  
-      painter.drawText(textRect, Qt::AlignHCenter, text());
-
-      break;
-    }
-
-    default:  break;
-  }
+    return QPushButton::event(event);
 }
 
 void Button::paintEvent(QPaintEvent *event) {
-  QPainter painter(this);
-  painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+    QPainter painter(this);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
 
-  // Border
-  drawBorder(painter);
+    QRect rec(rect().adjusted(1, 1, -1, -1));
 
-  // Background
-  drawBackground(painter, brush());
+    // Drawing border
+    painter.setPen(borderPen());
 
-  // Font
-  painter.setFont(font());
+    // Drawing background
+    painter.setBrush(brush());
+    painter.drawRoundedRect(rec, cornerRadius(), cornerRadius());
 
-  // Text color & opacity
-  painter.setPen(pen());
-  painter.setOpacity(isPressed ? 0.6 : 1.0);
+    // Drawing Text & Icon 
+    painter.setPen(textPen());    
+    painter.setOpacity(pressed() ? 0.6 : 1.0);
 
-  // Draw icon & text
-  drawContent(painter, pixmap());
+    const int textW = d->fm.horizontalAdvance(text());
+    const int textH = d->fm.height();
+
+    const int spacing = 8;
+
+    switch (variant()) {
+        case Button::Variant::Primary:
+        case Button::Variant::Secondary:
+        case Button::Variant::Ghost: {
+            switch (style()) {
+                case Button::Style::IconOnly: {
+                    const int iconX = (width() - iconSize().width()) / 2;
+                    const int iconY = (height() - iconSize().height()) / 2;
+                    painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+                }
+                break;
+
+                case Button::Style::TextOnly: {
+                    const int textX = (width() - textW) / 2;
+                    const int textY = (height() - textH) / 2 + d->fm.ascent();
+                    painter.drawText(textX, textY, text());
+                }
+                break;
+
+                case Button::Style::IconText: {
+                    const int contentW = 3 * spacing + iconSize().width() + textW;
+                    const int contentH = height();
+                    const int contentX = (width() - contentW) / 2;
+                    const int contentY = (height() - contentH) / 2;
+
+                    const QRect contentRect(contentX, contentY, contentW, contentH);
+
+                    const int iconX = contentRect.left() + spacing;
+                    const int iconY = contentRect.top() + (contentRect.height() - iconSize().height()) / 2;
+                    painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+
+                    const int textX = contentRect.left() + 2 * spacing + iconSize().width();
+                    const int textY = contentRect.top() + (contentRect.height() - textH) / 2 + d->fm.ascent();
+                    painter.drawText(textX, textY, text());
+                }
+                break;
+
+                case Button::Style::TextUnderIcon: {                    
+                    const int contentW = 2 * spacing + qMax(textW, iconSize().width());
+                    const int contentH = 3 * spacing + iconSize().height() + textH;
+                    const int contentX = (width() - contentW) / 2;
+                    const int contentY = (height() - contentH) / 2;
+
+                    const QRect contentRect(contentX, contentY, contentW, contentH);
+
+                    const int iconX = contentRect.left() + (contentRect.width() - iconSize().width()) / 2;
+                    const int iconY = contentRect.top() + spacing;
+                    painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+
+                    const int textX = contentRect.left() + (contentRect.width() - textW) / 2;
+                    const int textY = iconY + iconSize().height() + spacing + d->fm.ascent();
+                    painter.drawText(textX, textY, text());
+                }
+                break;
+            }
+        }
+        break;
+
+        case Button::Variant::Link: {
+            switch (style()) {
+                case Button::Style::IconOnly:
+                case Button::Style::TextUnderIcon:
+                    qWarning() << "IconOnly or TextUnderIcon styles are not allowed for Link Button.";
+                break;
+
+                case Button::Style::TextOnly: {
+                    const int textX = (width() - textW) / 2;
+                    const int textY = (height() - textH) / 2 + d->fm.ascent();
+                    painter.drawText(textX, textY, text());
+                }
+                break;
+
+                case Button::Style::IconText: {
+                    const int contentW = textW + spacing + iconSize().width();
+                    const int contentH = height();
+                    const int contentX = (width() - contentW) / 2;
+                    const int contentY = (height() - contentH) / 2;
+
+                    const QRect contentRect(contentX, contentY, contentW, contentH);
+
+                    const int textX = contentRect.left();
+                    const int textY = contentRect.top() + (contentRect.height() - textH) / 2 + d->fm.ascent();
+                    painter.drawText(textX, textY, text());
+
+                    const int iconX = textX + textW + spacing;
+                    const int iconY = contentRect.top() + (contentRect.height() - iconSize().height()) / 2;
+                    painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+                }
+                break;
+            }
+        }
+        break;
+    }
 }
 
-// ------------------------------------ Events -------------------------------------
-void Button::mousePressEvent(QMouseEvent *event) {
-  isPressed = true;
-  QPushButton::mousePressEvent(event);
-  update();
+// Colors
+QPen Button::textPen() const {
+    switch (variant()) {
+        case Button::Variant::Primary: 
+            return QPen(QColor("#FFFFFF"));
+        
+        case Button::Variant::Ghost: 
+        case Button::Variant::Secondary: {
+            if (!isEnabled())
+                return QPen(darkMode() ? "#777777" : "#9E9E9E");
+            else 
+                return QPen(darkMode() ? "#F0F0F0" : "#000000");
+        }
+
+        case Button::Variant::Link: {
+            if (!isEnabled())
+                return QPen(darkMode() ? "#1E3A8A" : "#93C5FD");
+            else if (pressed())
+                return QPen(darkMode() ? "#2563EB" : "#174EA6");
+            else if (hovered())
+                return QPen(darkMode() ? "#3B82F6" : "#1D5FD1");
+            else 
+                return QPen(darkMode() ? "#60A5FA" : "#2563EB");
+        }
+    }
+
+    return Qt::NoPen;
 }
 
-void Button::mouseReleaseEvent(QMouseEvent *event) {
-  isPressed = false;
-  QPushButton::mouseReleaseEvent(event);
-  update();
+QPen Button::borderPen() const {
+    switch (variant()) {
+        case Button::Variant::Primary:
+        case Button::Variant::Ghost:
+        case Button::Variant::Link:
+            return Qt::NoPen;
+
+        default:
+            return QPen(darkMode() ? QColor(255, 255, 255, 30) : QColor(0, 0, 0, 30), 0.6);
+    }
 }
 
-void Button::hideEvent(QHideEvent *event) {
-  isPressed = false;
-  isHover = false;
-  update();
+QBrush Button::brush() const {
+    QColor color;
+    switch (variant()) {
+        case Button::Variant::Primary: {
+            if (!isEnabled())
+                color = darkMode() ? "#1E3A8A" : "#93C5FD";
+            else if (pressed())
+                color = darkMode() ? "#1D4ED8" : "#1E40AF";
+            else if (hovered())
+                color = darkMode() ? "#2563EB" : "#1D4ED8";
+            else
+                color = darkMode() ? "#3B82F6" : "#2563EB";
+        }
+        break;
+    
+        case Button::Variant::Secondary: {
+            if (!isEnabled())
+                color = darkMode() ? "#1F1F1F" : "#E5E7EB";
+            else if (pressed())
+                color = darkMode() ? "#242424" : "#EAEAEA";
+            else if (hovered())
+                color = darkMode() ? "#363636" : "#F5F5F5";
+            else 
+                color = darkMode() ? "#2D2D2D" : "#FFFFFF";
+        }
+        break;
+
+        case Button::Variant::Link:
+            return Qt::NoBrush;
+
+        case Button::Variant::Ghost: {
+            if (!isEnabled())
+                color = QColor(0, 0, 0, 0);
+            else if (pressed())
+                color = darkMode() ? QColor(255, 255, 255, 31) : QColor(0, 0, 0, 26);
+            else if (hovered())
+                color = darkMode() ? QColor(255, 255, 255, 20)  : QColor(0, 0, 0, 15);
+            else
+                color = Qt::transparent;
+
+        }
+        break;
+    }
+
+    return QBrush(color);
 }
-
-void Button::enterEvent(QEnterEvent *event) {
-  isHover = true;
-
-  if (isShadowEnabled && !isIconOnly()) {
-    if (!isSecondary) 
-      _shadowColor = QColor::fromString("#008EDE");
-    else 
-      _shadowColor = isDarkMode ? QColor::fromString("#333333") : QColor::fromString("#FFFFFF");
-
-    effect->setColor(_shadowColor);
-    animate->setStartValue(effect->blurRadius());
-    animate->setEndValue(25);
-    animate->start();
-  }
-
-  if (isGradient && hoverGradientColor.isValid()) {
-    auto *a1 = new QPropertyAnimation(this, "startColor", this);
-    a1->setDuration(300);
-    a1->setStartValue(color1);
-    a1->setEndValue(hoverGradientColor);
-    a1->start();
-
-    auto *a2 = new QPropertyAnimation(this, "endColor", this);
-    a2->setDuration(300);
-    a2->setStartValue(color2);
-    a2->setEndValue(hoverGradientColor);
-    a2->start();
-  }
-
-  QPushButton::enterEvent(event);
-  update();
-}
-
-void Button::leaveEvent(QEvent *event) {
-  isHover = false;
-
-  if (isShadowEnabled) {
-    animate->setStartValue(effect->blurRadius());
-    animate->setEndValue(0);
-    animate->start();
-  }
-
-  if (isGradient) {
-    auto *a1 = new QPropertyAnimation(this, "startColor", this);
-    a1->setDuration(300);
-    a1->setStartValue(color1);
-    a1->setEndValue(gradientStart);
-    a1->start();
-
-    auto *a2 = new QPropertyAnimation(this, "endColor", this);
-    a2->setDuration(300);
-    a2->setStartValue(color2);
-    a2->setEndValue(gradientEnd);
-    a2->start();
-  }
-
-  QPushButton::leaveEvent(event);
-  update();
-
-}
-
