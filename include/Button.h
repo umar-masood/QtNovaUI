@@ -57,6 +57,8 @@ class Button : public QPushButton {
         QPen textPen() const;
         QPen borderPen() const;
         QBrush brush() const;
+
+        void init();
 };
 
 // Not for public API
@@ -66,7 +68,7 @@ struct ButtonPrivate {
 
     private:
         QPixmap lightIcon, darkIcon;
-        int cornerRadius = 6;
+        int cornerRadius = 6, angle = 0;
 
         bool darkMode = false, loading = false, hovered = false, pressed = false;
 
@@ -74,6 +76,5 @@ struct ButtonPrivate {
         Button::Style style = Button::Style::TextOnly;
 
         QFontMetrics fm{QFont()};
-
-        SpinnerProgress *spinner = nullptr;
+        QTimer *timer = nullptr;
 };

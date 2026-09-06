@@ -1,18 +1,31 @@
 #include "../include/Button.h"
-#include "../SpinnerProgress.h"
 
 #include <QFile>
 #include <QEvent>
 #include <QPainter>
+#include <QTimer>
 
 Button::Button(QWidget *parent) : QPushButton(parent), 
                                   d(std::make_unique<ButtonPrivate>()) {
-    setFont(font());
+    init();
 }
 
 Button::Button(const QString &text, QWidget *parent) : QPushButton(text, parent), 
                                                        d(std::make_unique<ButtonPrivate>()) {
+    init();
+}
+
+void Button::init() {
     setFont(font());
+    
+    // Loading Ring Timer
+    d->timer = new QTimer(this);
+    d->timer->setInterval(32);
+    
+    connect(d->timer, &QTimer::timeout, this, [this](){
+        d->angle = (d->angle + 4) % 360;
+        update();
+    });
 }
 
 void Button::setThemeIcon(const QString &light, const QString &dark) {
@@ -107,7 +120,10 @@ void Button::setLoading(bool loading) {
     
     d->loading = loading;
 
-    update();
+    if (d->loading && !d->timer->isActive())
+        d->timer->start();
+    else 
+        d->timer->stop();
 }
 
 bool Button::loading() const {
@@ -167,6 +183,30 @@ void Button::paintEvent(QPaintEvent *event) {
     painter.setBrush(brush());
     painter.drawRoundedRect(rec, cornerRadius(), cornerRadius());
 
+    // Loading Button
+    if (loading() && (variant() == Button::Variant::Primary || variant() == Button::Variant::Secondary)) {
+        const int min = qMin(width(), height());
+        const int diameter =  min - (min * 0.55);  // 0.55  for margin
+        const qreal loaderRecX = (width() - diameter) / 2;
+        const qreal loaderRecY = (height() - diameter) / 2;
+        QRectF loaderRec(loaderRecX, loaderRecY, diameter, diameter);
+
+        painter.save();
+        painter.translate(loaderRec.center());
+        painter.rotate(d->angle);
+        painter.translate(-loaderRec.center());
+
+        QColor penColor;
+        if (variant() == Button::Variant::Primary)
+            penColor = QColor("#FFFFFF");
+        else 
+            penColor = darkMode() ? QColor("#FFFFFF") : QColor("#000000");
+
+        painter.setPen(QPen(penColor, diameter * 0.12, Qt::SolidLine, Qt::RoundCap));
+        painter.drawArc(loaderRec, 90 * 16, -90 * 16);
+        painter.restore();
+    }
+
     // Drawing Text & Icon 
     painter.setPen(textPen());    
     painter.setOpacity(pressed() ? 0.6 : 1.0);
@@ -174,99 +214,101 @@ void Button::paintEvent(QPaintEvent *event) {
     const int textW = d->fm.horizontalAdvance(text());
     const int textH = d->fm.height();
     const int spacing = 8;
+    
+    if (!loading()) {
+        switch (variant()) {
+            case Button::Variant::Primary:
+            case Button::Variant::Secondary:
+            case Button::Variant::Ghost: {
+                switch (style()) {
+                    case Button::Style::IconOnly: {
+                        const int iconX = (width() - iconSize().width()) / 2;
+                        const int iconY = (height() - iconSize().height()) / 2;
+                        painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+                    }
+                    break;
 
-    switch (variant()) {
-        case Button::Variant::Primary:
-        case Button::Variant::Secondary:
-        case Button::Variant::Ghost: {
-            switch (style()) {
-                case Button::Style::IconOnly: {
-                    const int iconX = (width() - iconSize().width()) / 2;
-                    const int iconY = (height() - iconSize().height()) / 2;
-                    painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+                    case Button::Style::TextOnly: {
+                        const int textX = (width() - textW) / 2;
+                        const int textY = (height() - textH) / 2 + d->fm.ascent();
+                        painter.drawText(textX, textY, text());
+                    }
+                    break;
+
+                    case Button::Style::IconText: {
+                        const int contentW = 3 * spacing + iconSize().width() + textW;
+                        const int contentH = height();
+                        const int contentX = (width() - contentW) / 2;
+                        const int contentY = (height() - contentH) / 2;
+
+                        const QRect contentRect(contentX, contentY, contentW, contentH);
+
+                        const int iconX = contentRect.left() + spacing;
+                        const int iconY = contentRect.top() + (contentRect.height() - iconSize().height()) / 2;
+                        painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+
+                        const int textX = contentRect.left() + 2 * spacing + iconSize().width();
+                        const int textY = contentRect.top() + (contentRect.height() - textH) / 2 + d->fm.ascent();
+                        painter.drawText(textX, textY, text());
+                    }
+                    break;
+
+                    case Button::Style::TextUnderIcon: {                    
+                        const int contentW = 2 * spacing + qMax(textW, iconSize().width());
+                        const int contentH = 3 * spacing + iconSize().height() + textH;
+                        const int contentX = (width() - contentW) / 2;
+                        const int contentY = (height() - contentH) / 2;
+
+                        const QRect contentRect(contentX, contentY, contentW, contentH);
+
+                        const int iconX = contentRect.left() + (contentRect.width() - iconSize().width()) / 2;
+                        const int iconY = contentRect.top() + spacing;
+                        painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+
+                        const int textX = contentRect.left() + (contentRect.width() - textW) / 2;
+                        const int textY = iconY + iconSize().height() + spacing + d->fm.ascent();
+                        painter.drawText(textX, textY, text());
+                    }
+                    break;
                 }
-                break;
-
-                case Button::Style::TextOnly: {
-                    const int textX = (width() - textW) / 2;
-                    const int textY = (height() - textH) / 2 + d->fm.ascent();
-                    painter.drawText(textX, textY, text());
-                }
-                break;
-
-                case Button::Style::IconText: {
-                    const int contentW = 3 * spacing + iconSize().width() + textW;
-                    const int contentH = height();
-                    const int contentX = (width() - contentW) / 2;
-                    const int contentY = (height() - contentH) / 2;
-
-                    const QRect contentRect(contentX, contentY, contentW, contentH);
-
-                    const int iconX = contentRect.left() + spacing;
-                    const int iconY = contentRect.top() + (contentRect.height() - iconSize().height()) / 2;
-                    painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
-
-                    const int textX = contentRect.left() + 2 * spacing + iconSize().width();
-                    const int textY = contentRect.top() + (contentRect.height() - textH) / 2 + d->fm.ascent();
-                    painter.drawText(textX, textY, text());
-                }
-                break;
-
-                case Button::Style::TextUnderIcon: {                    
-                    const int contentW = 2 * spacing + qMax(textW, iconSize().width());
-                    const int contentH = 3 * spacing + iconSize().height() + textH;
-                    const int contentX = (width() - contentW) / 2;
-                    const int contentY = (height() - contentH) / 2;
-
-                    const QRect contentRect(contentX, contentY, contentW, contentH);
-
-                    const int iconX = contentRect.left() + (contentRect.width() - iconSize().width()) / 2;
-                    const int iconY = contentRect.top() + spacing;
-                    painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
-
-                    const int textX = contentRect.left() + (contentRect.width() - textW) / 2;
-                    const int textY = iconY + iconSize().height() + spacing + d->fm.ascent();
-                    painter.drawText(textX, textY, text());
-                }
-                break;
             }
-        }
-        break;
+            break;
 
-        case Button::Variant::Link: {
-            switch (style()) {
-                case Button::Style::IconOnly:
-                case Button::Style::TextUnderIcon:
-                    qWarning() << "IconOnly or TextUnderIcon styles are not allowed for Link Button.";
-                break;
+            case Button::Variant::Link: {
+                switch (style()) {
+                    case Button::Style::IconOnly:
+                    case Button::Style::TextUnderIcon:
+                        qWarning() << "IconOnly or TextUnderIcon styles are not allowed for Link Button.";
+                    break;
 
-                case Button::Style::TextOnly: {
-                    const int textX = (width() - textW) / 2;
-                    const int textY = (height() - textH) / 2 + d->fm.ascent();
-                    painter.drawText(textX, textY, text());
+                    case Button::Style::TextOnly: {
+                        const int textX = (width() - textW) / 2;
+                        const int textY = (height() - textH) / 2 + d->fm.ascent();
+                        painter.drawText(textX, textY, text());
+                    }
+                    break;
+
+                    case Button::Style::IconText: {
+                        const int contentW = textW + spacing + iconSize().width();
+                        const int contentH = height();
+                        const int contentX = (width() - contentW) / 2;
+                        const int contentY = (height() - contentH) / 2;
+
+                        const QRect contentRect(contentX, contentY, contentW, contentH);
+
+                        const int textX = contentRect.left();
+                        const int textY = contentRect.top() + (contentRect.height() - textH) / 2 + d->fm.ascent();
+                        painter.drawText(textX, textY, text());
+
+                        const int iconX = textX + textW + spacing;
+                        const int iconY = contentRect.top() + (contentRect.height() - iconSize().height()) / 2;
+                        painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
+                    }
+                    break;
                 }
-                break;
-
-                case Button::Style::IconText: {
-                    const int contentW = textW + spacing + iconSize().width();
-                    const int contentH = height();
-                    const int contentX = (width() - contentW) / 2;
-                    const int contentY = (height() - contentH) / 2;
-
-                    const QRect contentRect(contentX, contentY, contentW, contentH);
-
-                    const int textX = contentRect.left();
-                    const int textY = contentRect.top() + (contentRect.height() - textH) / 2 + d->fm.ascent();
-                    painter.drawText(textX, textY, text());
-
-                    const int iconX = textX + textW + spacing;
-                    const int iconY = contentRect.top() + (contentRect.height() - iconSize().height()) / 2;
-                    painter.drawPixmap(iconX, iconY, darkMode() ? d->darkIcon : d->lightIcon);
-                }
-                break;
             }
+            break;
         }
-        break;
     }
 }
 
