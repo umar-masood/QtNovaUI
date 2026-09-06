@@ -1,5 +1,5 @@
-#include "SpinnerProgress.h"
-#include "SmoothOpacity.h"
+#include "../include/SpinnerProgress.h"
+#include "../SmoothOpacity.h"
 
 #include <QPropertyAnimation>
 #include <QTimer>
