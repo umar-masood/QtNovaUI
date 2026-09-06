@@ -120,10 +120,13 @@ void Button::setLoading(bool loading) {
     
     d->loading = loading;
 
-    if (d->loading && !d->timer->isActive())
+    if (d->loading && !d->timer->isActive()) {
         d->timer->start();
-    else 
+        setEnabled(false);
+    } else {
         d->timer->stop();
+        setEnabled(true);
+    }
 }
 
 bool Button::loading() const {
