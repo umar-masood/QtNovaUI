@@ -40,7 +40,7 @@ void SpinnerProgress::start() {
 
     d->started = true;
 
-    show();
+    fadeIn();
 }
 
 bool SpinnerProgress::started() const {
