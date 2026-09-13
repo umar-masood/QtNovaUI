@@ -25,10 +25,8 @@ SpinnerProgress::SpinnerProgress(QWidget *parent) : QWidget(parent),
     d->timer->setInterval(16);
     d->timer->setTimerType(Qt::PreciseTimer);
     connect(d->timer, &QTimer::timeout, this, [this](){
-        d->outerAngle = (d->outerAngle + 3) % 360;
-
         if (this->indeterminate())
-            d->innerAngle = (d->innerAngle + 4) % 360;
+            d->angle = (d->angle + 4) % 360;
 
         update();
     });
@@ -134,44 +132,26 @@ void SpinnerProgress::paintEvent(QPaintEvent *event) {
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setBrush(Qt::NoBrush);
 
-    const int margin = 10;
+    const int margin = 14;
     const int diameter = qMin(width(), height()) - margin;
-    const qreal recX = (width() - diameter) / 2.0;
-    const qreal recY = (height() - diameter) / 2.0;
-    
-    // Rings Pen
+    const qreal innerRectX = (width() - diameter) / 2.0;
+    const qreal innerRectY = (height() - diameter) / 2.0;
+
+    // Inner Rect for Circular Arc 
+    const QRectF innerRect(innerRectX, innerRectY, diameter, diameter);
     const qreal strokeW = diameter * 0.06;
+
+    painter.save();
     QPen pen;
-    pen.setColor(QColor("#D2D4D5"));
     pen.setWidthF(strokeW);
-    pen.setCapStyle(Qt::SquareCap);
-
-    // Outer Ring 
-    const QRectF outerRect(recX, recY, diameter, diameter);
-
-    painter.save();
-    pen.setStyle(Qt::DashLine);
-    pen.setDashPattern({4, 3});
-    painter.setPen(pen);
-
-    painter.translate(outerRect.center());
-    painter.rotate(d->outerAngle);
-    painter.translate(-outerRect.center());
-    painter.drawArc(outerRect, 0, 360 * 16);
-    painter.restore(); 
-
-    // Inner Ring
-    const qreal spacing = diameter * 0.2;
-    const QRectF innerRect(outerRect.adjusted(spacing,spacing, -spacing, -spacing));
-
-    painter.save();
     pen.setColor(QColor("#14BDE5"));
     pen.setStyle(Qt::SolidLine);
+    pen.setCapStyle(Qt::RoundCap);
     painter.setPen(pen);
 
     if (indeterminate()) {
         painter.translate(innerRect.center());
-        painter.rotate(d->innerAngle);
+        painter.rotate(d->angle);
         painter.translate(-innerRect.center());
         painter.drawArc(innerRect, 135 * 16, -270 * 16); 
     } else {
@@ -192,5 +172,4 @@ void SpinnerProgress::paintEvent(QPaintEvent *event) {
     }
 
     painter.restore(); 
-
 }
