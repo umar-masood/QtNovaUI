@@ -5,35 +5,30 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED Core Gui Widgets)
+find_package(Qt6 REQUIRED Core Gui Widgets Svg)
+
+set(SOURCES 
+    src/Button.cpp
+    src/CheckBox.cpp 
+    src/SpinnerProgress.cpp 
+    src/Switch.cpp
+)
+
+set(HEADERS 
+    include/Button.h
+    include/CheckBox.h 
+    include/SpinnerProgress.h 
+    include/Switch.h
+)
 
 add_executable(QtNovaUI
     # UI Components
-    Button.cpp
-    CheckBox.cpp
-    ComboBox.cpp
-    Delegate.cpp
-    Dialog.cpp
-    LineProgress.cpp
-    Menu.cpp
-    Rectangle.cpp
-    RoundedBox.cpp
-    ScrollBar.cpp
-    SmoothOpacity.cpp
-    SmoothShadow.cpp
-    SpinnerProgress.cpp
-    TextField.cpp
-    Toggle.cpp
-    ToolTip.cpp
-    Seperator.cpp
-
-    # Entry Point of App
-    # main.cpp
-
-    # Resources
-    resources/resources.qrc
+    ${SOURCES}
+    ${HEADERS}
+    
+    main.cpp
 )
 
-target_link_libraries(QtNovaUI PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(QtNovaUI PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg)
 
 set_target_properties(QtNovaUI PROPERTIES WIN32_EXECUTABLE TRUE)
