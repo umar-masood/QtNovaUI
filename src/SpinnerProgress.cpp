@@ -22,13 +22,13 @@ SpinnerProgress::SpinnerProgress(QWidget *parent) : QWidget(parent),
 
     // Rings Timer
     d->timer = new QTimer(this);
-    d->timer->setInterval(32);
+    d->timer->setInterval(16);
     d->timer->setTimerType(Qt::PreciseTimer);
     connect(d->timer, &QTimer::timeout, this, [this](){
-        d->outerAngle = (d->outerAngle + 6) % 360;
+        d->outerAngle = (d->outerAngle + 3) % 360;
 
         if (this->indeterminate())
-            d->innerAngle = (d->innerAngle + 8) % 360;
+            d->innerAngle = (d->innerAngle + 4) % 360;
 
         update();
     });
