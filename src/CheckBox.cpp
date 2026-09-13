@@ -89,8 +89,9 @@ void CheckBox::paintEvent(QPaintEvent *event) {
 
     // Border
     QPen pen;
-    pen.setWidthF(checked() ? 1.0 : 0.5);
-    pen.setColor(checked() ? QColor("#0191DF") : (darkMode() ? QColor("#4D4D4D") : QColor("#CCCCCC")));
+    pen.setWidthF(1.0);
+    pen.setColor(checked() ? (hovered() ? QColor("#1BB3E6") : QColor("#0191DF")) 
+                            : (darkMode() ? QColor("#4D4D4D") : QColor("#CCCCCC")));
     pen.setStyle(Qt::SolidLine);
     pen.setJoinStyle(Qt::RoundJoin);
     painter.setPen(pen);
