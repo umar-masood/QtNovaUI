@@ -13,7 +13,7 @@ CheckBox::CheckBox(QWidget *parent) : QWidget(parent), d(std::make_unique<CheckB
     // Scale Anim
     d->checkMarkOffsetAnim = new QPropertyAnimation(this, "checkMarkOffset", this);
     d->checkMarkOffsetAnim->setDuration(1000);
-    d->checkMarkOffsetAnim->setEasingCurve(QEasingCurve::InOutQuad);
+    d->checkMarkOffsetAnim->setEasingCurve(QEasingCurve::OutCubic);
 }
 
 void CheckBox::setChecked(bool checked) {
