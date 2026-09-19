@@ -21,6 +21,9 @@ class ScrollBar : public QScrollBar {
         bool event(QEvent *event) override;
         void paintEvent(QPaintEvent *event) override;
 
+    private:
+        std::unique_ptr<ScrollBarPrivate> d = nullptr;
+        
         bool hovered() const;
         bool pressed() const;
 
@@ -29,9 +32,6 @@ class ScrollBar : public QScrollBar {
 
         void setTrackOpacity(qreal opacity);
         qreal trackOpacity() const;
-
-    private:
-        std::unique_ptr<ScrollBarPrivate> d = nullptr;
 };
 
 // Not for public use
