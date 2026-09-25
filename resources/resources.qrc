@@ -1,0 +1,38 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/arrow-down.svg</file>
+        <file>icons/arrow-right.svg</file>
+        <file>icons/copy.svg</file>
+        <file>icons/cut.svg</file>
+        <file>icons/hide.svg</file>
+        <file>icons/paste.svg</file>
+        <file>icons/redo.svg</file>
+        <file>icons/search.svg</file>
+        <file>icons/select-all.svg</file>
+        <file>icons/show.svg</file>
+        <file>icons/undo.svg</file>
+        <file>icons/x.svg</file>
+        <file>icons/dot.svg</file>
+        <file>icons/arrow-down-dark.svg</file>
+        <file>icons/check.svg</file>
+        <file>icons/check-dark.svg</file>
+        <file>icons/copy-dark.svg</file>
+        <file>icons/cut-dark.svg</file>
+        <file>icons/delete.svg</file>
+        <file>icons/delete-dark.svg</file>
+        <file>icons/dot-dark.svg</file>
+        <file>icons/eye.svg</file>
+        <file>icons/eye-closed.svg</file>
+        <file>icons/eye-closed-dark.svg</file>
+        <file>icons/eye-dark.svg</file>
+        <file>icons/hide-dark.svg</file>
+        <file>icons/paste-dark.svg</file>
+        <file>icons/redo-dark.svg</file>
+        <file>icons/search-dark.svg</file>
+        <file>icons/select-all-dark.svg</file>
+        <file>icons/show-dark.svg</file>
+        <file>icons/undo-dark.svg</file>
+        <file>icons/x-dark.svg</file>
+        <file>icons/arrow-right-dark.svg</file>
+    </qresource>
+</RCC>
