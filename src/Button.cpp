@@ -1,4 +1,5 @@
 #include "../include/Button.h"
+#include "../resources/Icons.h"
 
 #include <QFile>
 #include <QEvent>
@@ -49,8 +50,8 @@ void Button::setThemeIcon(const QString &light, const QString &dark) {
         return;
     }
 
-    d->darkIcon = QPixmap(dark).scaled(iconSize(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    d->lightIcon = QPixmap(light).scaled(iconSize(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);;
+    d->darkIcon = renderSVGIcon(dark, iconSize());
+    d->lightIcon = renderSVGIcon(light, iconSize());
 
     update();
 }
