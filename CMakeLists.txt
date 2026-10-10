@@ -14,8 +14,8 @@ set(SOURCES
     src/Switch.cpp
     src/TextField.cpp
     src/ScrollBar.cpp
+    src/Seperator.cpp
 
-    resources/Icons.cpp
 )
 
 set(HEADERS 
@@ -25,17 +25,23 @@ set(HEADERS
     include/Switch.h
     include/TextField.h
     include/ScrollBar.h
+    include/Seperator.h
+)
 
+set(RESOURCES 
     resources/Icons.h
+    resources/Icons.cpp
+
+    resources/resources.qrc
 )
 
 add_executable(QtNovaUI
     # UI Components
     ${SOURCES}
     ${HEADERS}
+    ${RESOURCES}
     
     main.cpp
-    resources/resources.qrc
 )
 
 target_link_libraries(QtNovaUI PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg)
