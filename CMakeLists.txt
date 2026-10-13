@@ -15,7 +15,7 @@ set(SOURCES
     src/TextField.cpp
     src/ScrollBar.cpp
     src/Seperator.cpp
-
+    src/ToolTip.cpp
 )
 
 set(HEADERS 
@@ -26,6 +26,7 @@ set(HEADERS
     include/TextField.h
     include/ScrollBar.h
     include/Seperator.h
+    include/ToolTip.h
 )
 
 set(RESOURCES 
