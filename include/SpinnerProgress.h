@@ -44,7 +44,7 @@ struct SpinnerProgressPrivate {
     friend class SpinnerProgress;
     private:
         bool darkMode = false, indeterminate = false, started = false;
-        int angle = 0, min = 0, max = 0, currVal = 0;
+        int angle = 0, min = 0, max = 100, currVal = 0;
 
         QTimer *timer = nullptr;        
         QPropertyAnimation *animation = nullptr;
