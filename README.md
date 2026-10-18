@@ -30,7 +30,7 @@ QtNovaUI is a collection of hand-built, custom Qt Widgets components that give d
 | Category | Components |
 | --- | --- |
 | **Inputs** | Button, CheckBox, TextField, Toggle |
-| **Feedback** | SpinnerProgress |
+| **Feedback** | SpinnerProgress, LineProgress|
 | **Navigation** | ScrollBar |
 | **Information** | ToolTip |
 
@@ -96,7 +96,8 @@ QtNovaUI/
 │   ├── SpinnerProgress.h
 │   ├── TextField.h
 │   ├── Toggle.h
-|   ├── ToolTip.h
+│   ├── ToolTip.h
+│   ├── LineProgress.h
 ├── src/                # Implementations (.cpp)
 │   ├── Button.cpp
 │   ├── CheckBox.cpp
@@ -105,7 +106,8 @@ QtNovaUI/
 │   ├── SpinnerProgress.cpp
 │   ├── TextField.cpp
 │   ├── Toggle.cpp
-|   |── ToolTip.cpp
+│   ├── ToolTip.cpp
+│   ├── LineProgress.cpp
 ├── resources/          # Icons and Qt resource files
 └── CMakeLists.txt
 ```
